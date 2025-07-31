@@ -1,6 +1,5 @@
-     import os
-
-     def criar_estrutura(arquivo_estrutura):
+import os
+def criar_estrutura(arquivo_estrutura):
          with open(arquivo_estrutura, 'r') as f:
              for linha in f:
                  caminho = linha.strip()
@@ -12,5 +11,5 @@
                      with open(caminho, 'w') as f_arquivo:
                          pass  # Cria o arquivo vazio
 
-     # Substitua 'structure.txt' pelo nome do seu arquivo
-     criar_estrutura('structure.txt')
+# Substitua 'structure.txt' pelo nome do seu arquivo
+criar_estrutura('structure.txt')
