@@ -1,11 +1,21 @@
-import { supabase } from './services/supabaseClient.js';
-import { extractOrderData } from './services/emailProcessor.js';
-import express from 'express';
-import cors from 'cors';
-
+const express = require('express');
+const cors = require('cors');
+const supabase = require('./services/supabaseClient');
+const { extractOrderData } = require('./services/emailProcessor');
+const nodemailer = require('nodemailer');
 const app = express();
+
 app.use(cors());
 app.use(express.json());
+
+// Configuração do transporte de e-mail
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
 
 // Endpoint para processar e-mails
 app.post('/process-email', async (req, res) => {
@@ -13,15 +23,19 @@ app.post('/process-email', async (req, res) => {
     const { emailBody } = req.body;
     const orderData = extractOrderData(emailBody);
     
-    const { data: supplier } = await supabase
+    // Buscar fornecedor pelo código
+    const { data: supplier, error: supplierError } = await supabase
       .from('suppliers')
       .select('id')
       .eq('supplier_code', orderData.supplierCode)
       .single();
 
-    if (!supplier) throw new Error('Supplier not found');
+    if (supplierError || !supplier) {
+      throw new Error('Fornecedor não cadastrado');
+    }
 
-    const { error } = await supabase
+    // Inserir pedido
+    const { error: orderError } = await supabase
       .from('purchase_orders')
       .insert({
         order_number: orderData.orderNumber,
@@ -30,8 +44,43 @@ app.post('/process-email', async (req, res) => {
         email_body: emailBody
       });
 
-    if (error) throw error;
+    if (orderError) throw orderError;
+
     res.status(200).json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para listar pedidos pendentes
+app.get('/orders/pending', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('purchase_orders')
+      .select('*, suppliers(name, address)')
+      .eq('status', 'pending');
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para atualizar status do pedido
+app.put('/orders/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    const { error } = await supabase
+      .from('purchase_orders')
+      .update({ status })
+      .eq('id', id);
+
+    if (error) throw error;
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -39,5 +88,5 @@ app.post('/process-email', async (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
