@@ -29,7 +29,6 @@ class EmailService {
     this.imap.openBox('INBOX', false, (err, box) => {
       if (err) throw err;
       
-      // Buscar emails não lidos
       this.imap.search(['UNSEEN'], (err, results) => {
         if (err) throw err;
         
@@ -46,7 +45,6 @@ class EmailService {
             simpleParser(stream, async (err, parsed) => {
               if (err) throw err;
               
-              // Extrair informações do email
               const orderInfo = this.extractOrderInfo(parsed.text);
               
               if (orderInfo) {
@@ -69,7 +67,6 @@ class EmailService {
   }
 
   extractOrderInfo(emailText) {
-    // Expressões regulares para extrair informações do pedido
     const orderNumberMatch = emailText.match(/Pedido de Compra: (#\d+)/);
     const supplierMatch = emailText.match(/Fornecedor: (.+?) \(/);
     const constructionSiteMatch = emailText.match(/Obra: (.+?) \(/);
