@@ -15,13 +15,15 @@ class EmailService {
   }
 
   connect() {
-    this.imap.connect();
-    this.imap.once('ready', () => {
-      this.openInbox();
-    });
-
-    this.imap.once('error', (err) => {
-      console.error('Erro de conexão IMAP:', err);
+    return new Promise((resolve, reject) => {
+      this.imap.connect();
+      this.imap.once('ready', () => {
+        this.openInbox();
+        resolve();
+      });
+      this.imap.once('error', (err) => {
+        reject(err);
+      });
     });
   }
 
