@@ -3,11 +3,11 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 require('dotenv').config();
 
-// Importação de rotas
+// Importação de rotas - REMOVA A DECLARAÇÃO DUPLICADA
 const emailRoutes = require('./src/routes/emailRoutes');
 const orderRoutes = require('./src/routes/orderRoutes');
 const userRoutes = require('./src/routes/userRoutes');
-const routeRoutes = require('./src/routes/routeRoutes');
+const routeRoutes = require('./src/routes/routeRoutes'); // Mantenha apenas esta linha
 const deliveryMenRoutes = require('./src/routes/deliveryMenRoutes');
 
 const app = express();

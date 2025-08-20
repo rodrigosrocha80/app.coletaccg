@@ -1,6 +1,6 @@
-CREATE DATABASE coleta_db;
 
-\c coleta_db;
+
+\c ccglocacao;
 
 -- Tabela de usuários
 CREATE TABLE users (

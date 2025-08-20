@@ -181,15 +181,33 @@
                 </div>
 
                 <!-- Usuários -->
-                <div class="tab-pane" id="users">
-                    <h2 class="mb-4">Gerenciamento de Usuários</h2>
-                    <div class="card">
-                        <div class="card-body">
-                            <p>Gerenciamento de usuários do sistema.</p>
-                        </div>
-                    </div>
-                </div>
-
+<div class="tab-pane" id="users">
+    <h2 class="mb-4">Gerenciamento de Usuários</h2>
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Usuários do Sistema</h5>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                <i class="bi bi-plus"></i> Adicionar Usuário
+            </button>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Tipo</th>
+                        <th>Cadastrado em</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="users-table-body">
+                    <!-- Conteúdo será carregado via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
                 <!-- Configurações -->
                 <div class="tab-pane" id="settings">
                     <h2 class="mb-4">Configurações do Sistema</h2>
@@ -264,6 +282,63 @@
             </div>
         </div>
     </div>
+    <!-- Modal para adicionar usuário -->
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addUserModalLabel">Adicionar Usuário</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="add-user-form">
+                    <div class="mb-3">
+                        <label for="user-name" class="form-label">Nome</label>
+                        <input type="text" class="form-control" id="user-name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="user-email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="user-email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="user-password" class="form-label">Senha</label>
+                        <input type="password" class="form-control" id="user-password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="user-role" class="form-label">Tipo de Usuário</label>
+                        <select class="form-control" id="user-role" required>
+                            <option value="admin">Administrador</option>
+                            <option value="user">Usuário</option>
+                            <option value="motoboy">Motoboy</option>
+                        </select>
+                    </div>
+                    <div id="motoboy-fields" class="d-none">
+                        <div class="mb-3">
+                            <label for="user-phone" class="form-label">Telefone</label>
+                            <input type="tel" class="form-control" id="user-phone">
+                        </div>
+                        <div class="mb-3">
+                            <label for="user-vehicle-type" class="form-label">Tipo de Veículo</label>
+                            <select class="form-control" id="user-vehicle-type">
+                                <option value="Moto">Moto</option>
+                                <option value="Carro">Carro</option>
+                                <option value="Van">Van</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="user-license-plate" class="form-label">Placa do Veículo</label>
+                            <input type="text" class="form-control" id="user-license-plate">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="save-user">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
 
     <!-- Modal para adicionar rota -->
     <div class="modal fade" id="addRouteModal" tabindex="-1" aria-labelledby="addRouteModalLabel" aria-hidden="true">
@@ -455,6 +530,89 @@ async function loadDeliveryMen() {
                 showToast(errorMessage, 'error');
             }
         }
+        // Carregar usuários
+async function loadUsers() {
+    try {
+        const response = await axios.get('http://localhost:3000/api/users');
+        const tableBody = document.getElementById('users-table-body');
+        tableBody.innerHTML = '';
+        
+        response.data.forEach(user => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${user.name}</td>
+                <td>${user.email}</td>
+                <td>
+                    <span class="badge ${user.role === 'admin' ? 'bg-danger' : user.role === 'motoboy' ? 'bg-info' : 'bg-secondary'}">
+                        ${user.role === 'admin' ? 'Administrador' : user.role === 'motoboy' ? 'Motoboy' : 'Usuário'}
+                    </span>
+                </td>
+                <td>${new Date(user.created_at).toLocaleDateString()}</td>
+                <td>
+                    <button class="btn btn-sm btn-info">Detalhes</button>
+                    <button class="btn btn-sm btn-warning">Editar</button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Erro ao carregar usuários:', error);
+        showToast('Erro ao carregar lista de usuários', 'error');
+    }
+}
+
+// Mostrar/ocultar campos de motoboy
+document.getElementById('user-role').addEventListener('change', function() {
+    const motoboyFields = document.getElementById('motoboy-fields');
+    if (this.value === 'motoboy') {
+        motoboyFields.classList.remove('d-none');
+    } else {
+        motoboyFields.classList.add('d-none');
+    }
+});
+
+// Salvar usuário
+document.getElementById('save-user').addEventListener('click', async function() {
+    const formData = {
+        name: document.getElementById('user-name').value,
+        email: document.getElementById('user-email').value,
+        password: document.getElementById('user-password').value,
+        role: document.getElementById('user-role').value
+    };
+    
+    if (formData.role === 'motoboy') {
+        formData.phone = document.getElementById('user-phone').value;
+        formData.vehicle_type = document.getElementById('user-vehicle-type').value;
+        formData.license_plate = document.getElementById('user-license-plate').value;
+    }
+    
+    try {
+        const response = await axios.post('http://localhost:3000/api/users', formData);
+        
+        if (response.data.success) {
+            // Fechar o modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addUserModal'));
+            modal.hide();
+            
+            // Recarregar a lista de usuários
+            loadUsers();
+            
+            // Limpar o formulário
+            document.getElementById('add-user-form').reset();
+            
+            showToast('Usuário cadastrado com sucesso!');
+        }
+    } catch (error) {
+        console.error('Erro ao adicionar usuário:', error);
+        let errorMessage = 'Erro ao adicionar usuário';
+        
+        if (error.response && error.response.data && error.response.data.error) {
+            errorMessage = error.response.data.error;
+        }
+        
+        showToast(errorMessage, 'error');
+    }
+});
 
         // Carregar pedidos
 async function loadOrders() {
@@ -495,7 +653,8 @@ async function loadOrders() {
     }
 }
 
-        // Processar emails
+
+// Processar emails
 async function processEmails() {
     try {
         // Mostrar indicador de carregamento
@@ -525,12 +684,13 @@ async function processEmails() {
         let errorMessage = 'Erro ao processar emails';
         if (error.response && error.response.data && error.response.data.error) {
             errorMessage = error.response.data.error;
+        } else if (error.message) {
+            errorMessage = error.message;
         }
         
         showToast(errorMessage, 'error');
     }
 }
-
         // Carregar rotas
         async function loadRoutes() {
             try {
