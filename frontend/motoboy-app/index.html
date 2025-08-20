@@ -127,25 +127,40 @@
             const password = document.getElementById('password').value;
 
             try {
-                const response = await axios.post('/api/users/login', {
-                    email,
-                    password,
-                    role: 'delivery_man'
-                });
-
-                if (response.data.success) {
-                    currentUser = response.data.user;
+                // Verificar primeiro na tabela de delivery_men
+                const deliveryMenResponse = await axios.get('http://localhost:3000/api/delivery-men');
+                const deliveryMan = deliveryMenResponse.data.find(dm => dm.email === email);
+                
+                if (deliveryMan) {
+                    // Se encontrou no cadastro de motoboys, fazer login
+                    currentUser = deliveryMan;
                     welcomeMessage.textContent = `Olá, ${currentUser.name}`;
                     loginSection.classList.add('d-none');
                     mainContent.classList.remove('d-none');
                     loadOrders();
                     checkActiveRoute();
                 } else {
-                    alert('Credenciais inválidas');
+                    // Se não encontrou, tentar login na tabela de users
+                    const userResponse = await axios.post('http://localhost:3000/api/users/login', {
+                        email,
+                        password,
+                        role: 'delivery_man'
+                    });
+
+                    if (userResponse.data.success) {
+                        currentUser = userResponse.data.user;
+                        welcomeMessage.textContent = `Olá, ${currentUser.name}`;
+                        loginSection.classList.add('d-none');
+                        mainContent.classList.remove('d-none');
+                        loadOrders();
+                        checkActiveRoute();
+                    } else {
+                        alert('Credenciais inválidas');
+                    }
                 }
             } catch (error) {
                 console.error('Erro no login:', error);
-                alert('Erro ao fazer login');
+                alert('Erro ao fazer login. Verifique o servidor.');
             }
         }
 
@@ -165,7 +180,7 @@
         // Carregar pedidos
         async function loadOrders() {
             try {
-                const response = await axios.get('/api/orders?status=pending');
+                const response = await axios.get('http://localhost:3000/api/orders?status=pending');
                 ordersList.innerHTML = '';
                 
                 response.data.forEach(order => {
@@ -192,16 +207,18 @@
                 });
             } catch (error) {
                 console.error('Erro ao carregar pedidos:', error);
+                ordersList.innerHTML = '<div class="text-center text-muted">Erro ao carregar pedidos</div>';
             }
         }
 
         // Coletar pedido
         async function collectOrder(orderId) {
             try {
-                await axios.put(`/api/orders/${orderId}`, {
+                await axios.put(`http://localhost:3000/api/orders/${orderId}`, {
                     status: 'collected',
                     collected_by: currentUser.id
                 });
+                alert('Pedido coletado com sucesso!');
                 loadOrders();
             } catch (error) {
                 console.error('Erro ao coletar pedido:', error);
@@ -212,7 +229,7 @@
         // Verificar rota ativa
         async function checkActiveRoute() {
             try {
-                const response = await axios.get(`/api/routes/active/${currentUser.id}`);
+                const response = await axios.get(`http://localhost:3000/api/routes/active/${currentUser.id}`);
                 if (response.data.active) {
                     activeRouteSection.classList.remove('d-none');
                     routeName.textContent = response.data.route.name;
@@ -262,7 +279,7 @@
         // Enviar localização para o servidor
         async function sendLocation(lat, lng) {
             try {
-                await axios.post('/api/routes/location', {
+                await axios.post('http://localhost:3000/api/routes/location', {
                     delivery_man_id: currentUser.id,
                     latitude: lat,
                     longitude: lng
@@ -272,14 +289,23 @@
             }
         }
 
-        // Inicializar mapa (implementação simplificada)
-        function initMap() {
-            console.log("Mapa inicializado para o motoboy");
-        }
-
         // Inicializar quando o documento estiver pronto
         document.addEventListener('DOMContentLoaded', function() {
-            initMap();
+            // Verificar se já está logado (exemplo simples)
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                welcomeMessage.textContent = `Olá, ${currentUser.name}`;
+                loginSection.classList.add('d-none');
+                mainContent.classList.remove('d-none');
+                loadOrders();
+                checkActiveRoute();
+            }
+            
+            // Botão de login visível
+            loginBtn.addEventListener('click', function() {
+                loginSection.classList.remove('d-none');
+            });
         });
     </script>
 </body>
