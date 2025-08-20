@@ -372,36 +372,43 @@
         });
 
         // Carregar motoboys
-        async function loadDeliveryMen() {
-            try {
-                const response = await axios.get('http://localhost:3000/api/delivery-men');
-                const tableBody = document.getElementById('delivery-men-table-body');
-                tableBody.innerHTML = '';
-                
-                response.data.forEach(deliveryMan => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${deliveryMan.name}</td>
-                        <td>${deliveryMan.phone}</td>
-                        <td>${deliveryMan.email}</td>
-                        <td>${deliveryMan.vehicle_type} - ${deliveryMan.license_plate}</td>
-                        <td>
-                            <span class="badge ${deliveryMan.status === 'available' ? 'bg-success' : 'bg-secondary'}">
-                                ${deliveryMan.status === 'available' ? 'Disponível' : 'Indisponível'}
-                            </span>
-                        </td>
-                        <td>
-                            <button class="btn btn-sm btn-info">Detalhes</button>
-                            <button class="btn btn-sm btn-warning">Editar</button>
-                        </td>
-                    `;
-                    tableBody.appendChild(row);
-                });
-            } catch (error) {
-                console.error('Erro ao carregar motoboys:', error);
-                showToast('Erro ao carregar lista de motoboys', 'error');
-            }
+async function loadDeliveryMen() {
+    try {
+        const response = await axios.get('http://localhost:3000/api/delivery-men');
+        const tableBody = document.getElementById('delivery-men-table-body');
+        tableBody.innerHTML = '';
+
+        if (response.data.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum motoboy cadastrado</td></tr>';
+            return;
         }
+
+        response.data.forEach(deliveryMan => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${deliveryMan.name}</td>
+                <td>${deliveryMan.phone}</td>
+                <td>${deliveryMan.email}</td>
+                <td>${deliveryMan.vehicle_type} - ${deliveryMan.license_plate}</td>
+                <td>
+                    <span class="badge ${deliveryMan.status === 'available' ? 'bg-success' : 'bg-secondary'}">
+                        ${deliveryMan.status === 'available' ? 'Disponível' : 'Indisponível'}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-info">Detalhes</button>
+                    <button class="btn btn-sm btn-warning">Editar</button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Erro ao carregar motoboys:', error);
+        const tableBody = document.getElementById('delivery-men-table-body');
+        tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar motoboys</td></tr>';
+        showToast('Erro ao carregar lista de motoboys: ' + (error.response?.data?.error || error.message), 'error');
+    }
+}
 
         // Salvar motoboy
         async function saveDeliveryMan() {
@@ -442,49 +449,79 @@
         }
 
         // Carregar pedidos
-        async function loadOrders() {
-            try {
-                const response = await axios.get('http://localhost:3000/api/orders');
-                const tableBody = document.getElementById('orders-table-body');
-                tableBody.innerHTML = '';
-                
-                response.data.forEach(order => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${order.order_number}</td>
-                        <td>${order.supplier}</td>
-                        <td>${order.construction_site}</td>
-                        <td>R$ ${order.value}</td>
-                        <td>
-                            <span class="badge ${order.status === 'pending' ? 'bg-warning' : 'bg-success'}">
-                                ${order.status === 'pending' ? 'Pendente' : 'Coletado'}
-                            </span>
-                        </td>
-                        <td>
-                            <button class="btn btn-sm btn-info">Detalhes</button>
-                            <button class="btn btn-sm btn-warning">Editar</button>
-                        </td>
-                    `;
-                    tableBody.appendChild(row);
-                });
-            } catch (error) {
-                console.error('Erro ao carregar pedidos:', error);
-                showToast('Erro ao carregar lista de pedidos', 'error');
-            }
+async function loadOrders() {
+    try {
+        const response = await axios.get('http://localhost:3000/api/orders');
+        const tableBody = document.getElementById('orders-table-body');
+        tableBody.innerHTML = '';
+
+        if (response.data.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum pedido encontrado</td></tr>';
+            return;
         }
 
+        response.data.forEach(order => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${order.order_number}</td>
+                <td>${order.supplier}</td>
+                <td>${order.construction_site}</td>
+                <td>R$ ${order.value}</td>
+                <td>
+                    <span class="badge ${order.status === 'pending' ? 'bg-warning' : 'bg-success'}">
+                        ${order.status === 'pending' ? 'Pendente' : 'Coletado'}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-info">Detalhes</button>
+                    <button class="btn btn-sm btn-warning">Editar</button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Erro ao carregar pedidos:', error);
+        const tableBody = document.getElementById('orders-table-body');
+        tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar pedidos</td></tr>';
+        showToast('Erro ao carregar lista de pedidos: ' + (error.response?.data?.error || error.message), 'error');
+    }
+}
+
         // Processar emails
-        async function processEmails() {
-            try {
-                const response = await axios.post('http://localhost:3000/api/email/process');
-                showToast('Processamento de emails iniciado');
-                // Recarregar pedidos após processamento
-                setTimeout(loadOrders, 3000);
-            } catch (error) {
-                console.error('Erro ao processar emails:', error);
-                showToast('Erro ao processar emails', 'error');
-            }
+async function processEmails() {
+    try {
+        // Mostrar indicador de carregamento
+        const processBtn = document.getElementById('process-emails-btn');
+        const originalText = processBtn.innerHTML;
+        processBtn.innerHTML = '<i class="bi bi-arrow-repeat spinner"></i> Processando...';
+        processBtn.disabled = true;
+
+        const response = await axios.post('http://localhost:3000/api/email/process');
+        
+        // Restaurar botão
+        processBtn.innerHTML = originalText;
+        processBtn.disabled = false;
+        
+        showToast(response.data.message);
+        
+        // Recarregar pedidos após processamento
+        setTimeout(loadOrders, 1000);
+    } catch (error) {
+        console.error('Erro ao processar emails:', error);
+        
+        // Restaurar botão em caso de erro
+        const processBtn = document.getElementById('process-emails-btn');
+        processBtn.innerHTML = '<i class="bi bi-envelope"></i> Processar Emails';
+        processBtn.disabled = false;
+        
+        let errorMessage = 'Erro ao processar emails';
+        if (error.response && error.response.data && error.response.data.error) {
+            errorMessage = error.response.data.error;
         }
+        
+        showToast(errorMessage, 'error');
+    }
+}
 
         // Carregar rotas
         async function loadRoutes() {

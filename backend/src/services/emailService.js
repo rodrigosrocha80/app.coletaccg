@@ -1,74 +1,58 @@
-const Imap = require('imap');
-const { simpleParser } = require('mailparser');
 const pool = require('../config/database');
 
 class EmailService {
   constructor() {
-    this.imap = new Imap({
-      user: process.env.EMAIL_USER,
-      password: process.env.EMAIL_PASSWORD,
-      host: 'imap.gmail.com',
-      port: 993,
-      tls: true,
-      tlsOptions: { rejectUnauthorized: false }
-    });
+    console.log('Serviço de email inicializado (modo simulação)');
   }
 
-  connect() {
-    return new Promise((resolve, reject) => {
-      this.imap.connect();
-      this.imap.once('ready', () => {
-        this.openInbox();
+  async connect() {
+    console.log('Simulando conexão com servidor de email...');
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        console.log('Conexão simulada bem-sucedida');
         resolve();
-      });
-      this.imap.once('error', (err) => {
-        reject(err);
-      });
+      }, 1000);
     });
   }
 
-  openInbox() {
-    this.imap.openBox('INBOX', false, (err, box) => {
-      if (err) throw err;
+  async processEmails() {
+    try {
+      await this.connect();
       
-      this.imap.search(['UNSEEN'], (err, results) => {
-        if (err) throw err;
-        
-        if (results.length === 0) {
-          console.log('Nenhum email novo encontrado.');
-          this.imap.end();
-          return;
+      // Simulação de extração de emails - em produção, isso viria de um servidor IMAP real
+      const simulatedEmails = [
+        `Pedido de Compra: #65408 foi criado em 19/08/2025 00:00 e segue para aprovação.
+
+        Pedido de Compra: #65408
+        Fornecedor: MASON EQUIPAMENTOS LTDA. (5167)
+        Obra: SINFRA - OBRA SÃO JOÃO BATISTA 2 ª FASE (510)
+        Comprador: JEFFERSON
+        Data: 19/08/2025
+        Valor: R$ 5.148,87
+        Centro de Custos: SINFRA - OBRA SÃO JOÃO BATISTA 2 ª FASE (510)
+        Departamento: MN-26 KOMATSU GD535-5 (409)`
+      ];
+
+      let processedCount = 0;
+
+      for (const emailText of simulatedEmails) {
+        const orderInfo = this.extractOrderInfo(emailText);
+        if (orderInfo) {
+          await this.saveOrderToDatabase(orderInfo);
+          processedCount++;
         }
+      }
 
-        const fetch = this.imap.fetch(results, { bodies: '' });
-        
-        fetch.on('message', (msg, seqno) => {
-          msg.on('body', (stream, info) => {
-            simpleParser(stream, async (err, parsed) => {
-              if (err) throw err;
-              
-              const orderInfo = this.extractOrderInfo(parsed.text);
-              
-              if (orderInfo) {
-                await this.saveOrderToDatabase(orderInfo);
-              }
-            });
-          });
-        });
-
-        fetch.once('error', (err) => {
-          console.error('Erro ao buscar emails:', err);
-        });
-
-        fetch.once('end', () => {
-          console.log('Processamento de emails concluído.');
-          this.imap.end();
-        });
-      });
-    });
+      console.log(`Processamento concluído. ${processedCount} pedidos processados.`);
+      return processedCount;
+    } catch (error) {
+      console.error('Erro ao processar emails:', error);
+      throw error;
+    }
   }
 
   extractOrderInfo(emailText) {
+    // Expressões regulares para extrair informações do pedido
     const orderNumberMatch = emailText.match(/Pedido de Compra: (#\d+)/);
     const supplierMatch = emailText.match(/Fornecedor: (.+?) \(/);
     const constructionSiteMatch = emailText.match(/Obra: (.+?) \(/);
@@ -116,9 +100,14 @@ class EmailService {
       const result = await pool.query(query, values);
       if (result.rowCount > 0) {
         console.log(`Pedido ${orderInfo.order_number} salvo no banco de dados.`);
+        return true;
+      } else {
+        console.log(`Pedido ${orderInfo.order_number} já existe.`);
+        return false;
       }
     } catch (error) {
       console.error('Erro ao salvar pedido:', error);
+      throw error;
     }
   }
 }
