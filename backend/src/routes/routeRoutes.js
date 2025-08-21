@@ -24,6 +24,14 @@ router.post('/', async (req, res) => {
   try {
     const { name, delivery_man_id, order_ids } = req.body;
 
+    // Validação dos campos obrigatórios
+    if (!name || !delivery_man_id) {
+      return res.status(400).json({ error: 'Nome e ID do motoboy são obrigatórios' });
+    }
+
+    // Garantir que order_ids seja um array, mesmo se não for fornecido
+    const ordersArray = Array.isArray(order_ids) ? order_ids : [];
+
     await client.query('BEGIN');
 
     // Inserir a rota
@@ -34,17 +42,17 @@ router.post('/', async (req, res) => {
 
     const route = routeResult.rows[0];
 
-    // Associar pedidos à rota
-    for (let i = 0; i < order_ids.length; i++) {
+    // Associar pedidos à rota (apenas se houver pedidos)
+    for (let i = 0; i < ordersArray.length; i++) {
       await client.query(
         'INSERT INTO route_orders (route_id, order_id, sequence) VALUES ($1, $2, $3)',
-        [route.id, order_ids[i], i + 1]
+        [route.id, ordersArray[i], i + 1]
       );
 
       // Atualizar status do pedido para "em rota"
       await client.query(
         'UPDATE orders SET status = $1 WHERE id = $2',
-        ['in_route', order_ids[i]]
+        ['em_rota', ordersArray[i]]
       );
     }
 
@@ -119,7 +127,7 @@ router.put('/:id/complete', async (req, res) => {
     // Atualizar status dos pedidos para "coletado"
     await client.query(
       'UPDATE orders SET status = $1 WHERE id IN (SELECT order_id FROM route_orders WHERE route_id = $2)',
-      ['collected', id]
+      ['COLETADO', id]
     );
 
     await client.query('COMMIT');

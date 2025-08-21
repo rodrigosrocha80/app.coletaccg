@@ -7,7 +7,7 @@ exports.getOrders = async (req, res) => {
     let params = [];
 
     if (status) {
-      query += ' WHERE status = $1';
+      query += ' WHERE status = $1', ['PENDENTE'];
       params.push(status);
     }
 
@@ -58,8 +58,8 @@ exports.updateOrder = async (req, res) => {
 
 exports.getOrderStats = async (req, res) => {
   try {
-    const pendingResult = await pool.query('SELECT COUNT(*) FROM orders WHERE status = $1', ['pending']);
-    const collectedResult = await pool.query('SELECT COUNT(*) FROM orders WHERE status = $1', ['collected']);
+    const pendingResult = await pool.query('SELECT COUNT(*) FROM orders WHERE status = $1', ['PENDENTE']);
+    const collectedResult = await pool.query('SELECT COUNT(*) FROM orders WHERE status = $1', ['COLETADO']);
 
     res.json({
       pending: parseInt(pendingResult.rows[0].count),

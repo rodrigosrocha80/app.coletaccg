@@ -595,7 +595,7 @@ class EmailService {
   }
 
   // Método para listar pedidos salvos
-async function listOrders(limit = 10) {
+async listOrders(limit = 10) {
     try {
         const query = `
             SELECT id, order_number, customer, value, status, fornecedor, obra, processed_at
